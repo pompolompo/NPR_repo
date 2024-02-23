@@ -1,0 +1,222 @@
+---
+title: 'Pràctica 1: Tests de permutacions exactes'
+author: "Ferran Garcia"
+date: "2024-02-23"
+output: 
+ pdf_document:
+   toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\newpage
+
+# Exercici 1: Antropologia
+
+Volem contrastar si els etruscs eren originaris de la península italiana a través de les seves restes. Per tal de fer-ho compararem les amplades màximes del crani de restes d'etruscs amb la d'italians. Disposem de les dades següents:
+
+```{r}
+etrusc <- c(141, 132, 154, 142, 141, 150, 134, 140)
+italia <- c(133, 138, 136, 125, 135, 130, 127, 131, 116, 128)
+cranis <- c(etrusc, italia)
+```
+
+## Pas 1: Plantejament d'hipòtesis
+
+De partida, suposem que no hi ha diferència entre les mesures etrusques i les italianes. És a dir: Els etruscs provenen de la península italiana. 
+
+La nostra hipòtesi nul·la és: $H_0: F_e = F_i$
+La nostra hipòtesi alternativa és: $H_1: F_e \neq F_i$
+
+On $F_e$ denota la distribució de les amplades màximes dels cranis etruscs i $F_i$ denota la distribució de les amplades màximes dels cranis italians.
+
+## Pas 2: Què i com permutem?
+
+Permutarem les amplades de la mostra i calcularem mesures de discrepància per contrastar la nostra hipòtesi. Ens interessa trobar diferències entre els grups *etrusc* i *italià*. Per tant només les permutacions que intercanviin mesures entre grups son informatives. És a dir, el nombre de permutacions informatives son: $C^{n}_{n+m} = C^{8}_{18} = \frac{18!}{8!10!} = 43758$, on $n$ és la mida mostral etrusca i $m$ és la mida mostral italiana.
+
+```{r}
+n <- 8
+m <- 10
+nperm <- choose(n + m, m); nperm
+perm <- combn(1:(n+m), m) |>
+  as.data.frame()
+```
+
+## Pas 3: Escollim un estadístic
+
+En aquest apartat justifiquem l'elecció d'estadístics que ens ajudin a identificar diferències entre els dos grups: El de les 8 primeres observacions i el de les 10 últimes observacions.
+
+### T-Statistic
+
+$$
+T = 
+\frac
+{\bar{E} - \bar{I}}
+{\sqrt{
+\frac{S²_{e}}{n}
++ 
+\frac{S²_{i}}{m}
+}}
+$$
+
+On $\bar{E}$ és la mitjana de les dades etrusques (les 8 primeres) i $\bar{I}$ és la mitjana de les dades italianes (les últimes 10). Les variàncies mostrals de les dades etrusques i italianes son $S²_e$ i $S²_i$, respectivament.
+
+```{r}
+TStat = function(vec, ind){
+  # estadístic t
+  r <- t.test(vec[ind], vec[-ind],
+              var.equal = TRUE)[["statistic"]]
+  return(r)
+} 
+```
+
+## Pas 4: Càlcul del p-valor
+
+Com que el nombre de permutacions informatives és relativament baix (`r nperm`) utilitzarem un test exacte. Per tant calcularem l'estadístic escollit per totes les permutacions.
+
+```{r}
+perm_t <- vapply(
+  X = perm,
+  FUN = TStat,
+  vec = cranis,
+  FUN.VALUE = .0
+)
+```
+
+També calculem l'estadístic corresponent a la mostra real i el visualitzem en un histograma sobre la distribució permutada:
+
+```{r}
+real_t <- TStat(vec = cranis,
+                ind = 1:m); real_t
+```
+
+
+```{r}
+hist(perm_t, 
+     probability = TRUE,
+     breaks = 30,
+     main = "Distribució permutada i observació real",
+     xlab = NULL, ylab = NULL)
+abline(v = real_t, lwd = 3, col = "red")
+```
+
+Notem que l'estadístic calculat a partir de la mostra real és bastant extrem en la distribució de dades permutades que sosté l'hipòtesi nul·la. Ara calculem el *p-valor* com la proporció de mostres permutades més extremes que la real `r real_t`:
+
+```{r}
+perm_extr <- sum(abs(perm_t) > real_t)
+pval <- perm_extr/nperm
+round(pval, digits = 4)
+```
+
+No cal fer els càlculs per adonar-se que si enlloc de fer u contrast bilateral el fèssim a una cua el *p-valor* seria encara més petit sempre i quant l'hipòtesi alternativa fos $H_1: F_e > F_i$
+
+## Pas 5: Conclusios
+
+Hem fet un test de permutacions exacte utilitzant l'estadístic T. Podem concloure que els etruscs tenen una amplada de crani més gran que els italians. Per tant és difícil sostenir que els etruscs provenen de la península italiana basant-se en la similitud dels seus cranis.
+
+\newpage
+
+# Exercici 2: Psicologia (cal canviar el text i raonament)
+
+Volem contrastar si les dones i els homes tenen nivells d'aoutoestima diferents. Per tal de fer-ho compararem les respostes a una enquesta sobre l'autoestima mesurada amb una escala de Likert. Suposem que la diferència entre dos nivells equival a la diferència numèrica entre els mateixos.
+
+```{r}
+homes <- c(8, 7, 6, 8, 7, 5, 6, 4, 9, 9)
+dones <- c(8, 6, 5, 6, 5, 4, 4, 4, 6, 4)
+autoestima <- c(homes, dones)
+```
+
+## Pas 1: Plantejament d'hipòtesis
+
+De partida, suposem que no hi ha diferència entre les mesures dels homes i de les dones. És a dir: Els nivells d'autoestima són els mateixos en homes i en dones. 
+
+La nostra hipòtesi nul·la és: $H_h: F_e = F_d$
+La nostra hipòtesi alternativa és: $H_1: F_h \neq F_d$
+
+On $F_h$ denota la distribució de les respostes sobre l'autoestima dels homes i $F_d$ denota la distribució de les respostes sobre l'autoestima de les dones.
+
+## Pas 2: Què i com permutem?
+
+Permutarem les escales de Likert de la mostra i calcularem mesures de discrepància per contrastar la nostra hipòtesi. Ens interessa trobar diferències entre els grups *dones* i *homes*. Per tant només les permutacions que intercanviin mesures entre grups son informatives. És a dir, el nombre de permutacions informatives son: $C^{n}_{n+m} = C^{10}_{20} = \frac{20!}{10!10!} = 184756$, on $n$ és la mida mostral d'homes i $m$ és la mida mostral de dones.
+
+```{r}
+n <- 10
+m <- 10
+nperm <- choose(n + m, m); nperm
+perm <- combn(1:(n+m), m) |>
+  as.data.frame()
+```
+
+## Pas 3: Escollim un estadístic
+
+En aquest apartat justifiquem l'elecció d'estadístics que ens ajudin a identificar diferències entre els dos grups: El de les 10 primeres observacions i el de les 10 últimes observacions.
+
+### T-Statistic
+
+$$
+T = 
+\frac
+{\bar{E} - \bar{I}}
+{\sqrt{
+\frac{S²_{e}}{n}
++ 
+\frac{S²_{i}}{m}
+}}
+$$
+
+On $\bar{E}$ és la mitjana de les dades etrusques (les 8 primeres) i $\bar{I}$ és la mitjana de les dades italianes (les últimes 10). Les variàncies mostrals de les dades etrusques i italianes son $S²_e$ i $S²_i$, respectivament.
+
+```{r}
+TStat = function(vec, ind){
+  # estadístic t
+  r <- t.test(vec[ind], vec[-ind],
+              var.equal = TRUE)[["statistic"]]
+  return(r)
+} 
+```
+
+## Pas 4: Càlcul del p-valor
+
+Com que el nombre de permutacions informatives és relativament baix (`r nperm`) utilitzarem un test exacte. Per tant calcularem l'estadístic escollit per totes les permutacions.
+
+```{r}
+perm_t <- vapply(
+  X = perm,
+  FUN = TStat,
+  vec = autoestima,
+  FUN.VALUE = .0
+)
+```
+
+També calculem l'estadístic corresponent a la mostra real i el visualitzem en un histograma sobre la distribució permutada:
+
+```{r}
+real_t <- TStat(vec = autoestima,
+                ind = 1:m); real_t
+```
+
+
+```{r}
+hist(perm_t, 
+     probability = TRUE,
+     breaks = 30,
+     main = "Distribució permutada i observació real",
+     xlab = NULL, ylab = NULL)
+abline(v = real_t, lwd = 3, col = "red")
+```
+
+Notem que l'estadístic calculat a partir de la mostra real és bastant extrem en la distribució de dades permutades que sosté l'hipòtesi nul·la. Ara calculem el *p-valor* com la proporció de mostres permutades més extremes que la real `r real_t`:
+
+```{r}
+perm_extr <- sum(abs(perm_t) > real_t)
+pval <- perm_extr/nperm 
+round(pval, digits = 4)
+```
+
+En aquest cas no podem afirmar amb un nivell de confiança del 99% que la distribució de l'autoestima entre homes i dones és diferent. No obstant, amb menor confiança si que podem afirmar que existeixen diferències.
+
+## Pas 5: Conclusios
+
+Hem fet un test de permutacions exacte utilitzant l'estadístic T. No podem concloure que existeixi cap diferència entre l'autoestima en funció del gènere. 
